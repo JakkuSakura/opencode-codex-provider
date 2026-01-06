@@ -2,7 +2,65 @@
 
 Custom AI SDK provider that forwards OpenCode requests to `codex exec --json`.
 
-Options:
+## Setup
+
+1) Install Codex CLI and make sure `codex` is on your PATH.
+
+2) Clone this repo:
+
+```bash
+git clone https://github.com/JakkuSakura/opencode-codex-exec-provider
+```
+
+3) Configure OpenCode to use the provider.
+Edit `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "codex-exec/gpt-5.2-codex-medium",
+  "provider": {
+    "codex-exec": {
+      "npm": "file:///Users/jakku/Dev/opencode-codex-exec-provider",
+      "name": "Codex Exec",
+      "options": {
+        "codexPath": "codex",
+        "includeReasoning": false,
+        "skipGitRepoCheck": true,
+        "emptyPromptFallback": "placeholder"
+      },
+      "models": {
+        "gpt-5.2-codex-medium": {
+          "id": "gpt-5.2-codex",
+          "name": "GPT 5.2 Codex Medium (codex exec)",
+          "family": "gpt-5.2-codex",
+          "reasoning": true,
+          "limit": { "context": 272000, "output": 128000 },
+          "modalities": { "input": ["text", "image"], "output": ["text"] },
+          "options": {
+            "reasoningEffort": "medium",
+            "reasoningSummary": "auto",
+            "textVerbosity": "medium"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+4) Restart OpenCode.
+
+5) In the TUI, run `/models` and select `codex-exec/gpt-5.2-codex-medium`.
+
+## Notes
+
+- This provider is text-only. Images and files are represented as placeholders in the prompt.
+- Tool calls are not bridged; they are stringified into the prompt.
+- If you see `Reading prompt from stdin...`, enable `emptyPromptFallback: "json"` to inspect what OpenCode is sending.
+
+## Options
+
 - `codexPath`: path to the Codex CLI (default: `codex`)
 - `args`: extra args for `codex exec`
 - `env`: extra environment variables for the child process
