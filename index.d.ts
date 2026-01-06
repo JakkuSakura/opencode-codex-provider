@@ -7,6 +7,7 @@ type CodexExecOptions = {
   env?: Record<string, string>;
   includeReasoning?: boolean;
   skipGitRepoCheck?: boolean;
+  emptyPromptFallback?: "placeholder" | "json" | "error" | "skip";
 };
 
 export declare function createCodexExec(options?: CodexExecOptions): ProviderV3 & {

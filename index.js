@@ -14,13 +14,14 @@ const DEFAULT_USAGE = Object.freeze({
   },
 });
 
-function buildPrompt(prompt) {
+function buildPrompt(prompt, options) {
   const lines = [];
 
   for (const message of prompt) {
     if (message.role === "system") {
-      if (message.content?.trim()) {
-        lines.push(`System:\n${message.content.trim()}`);
+      const systemText = extractText(message.content);
+      if (systemText) {
+        lines.push(`System:\n${systemText}`);
       }
       continue;
     }
@@ -31,13 +32,29 @@ function buildPrompt(prompt) {
     lines.push(`${label}:\n${text}`);
   }
 
-  return lines.join("\n\n").trim();
+  const promptText = lines.join("\n\n").trim();
+  if (promptText) return promptText;
+
+  const fallback = options?.emptyPromptFallback ?? "placeholder";
+  if (fallback === "json") {
+    try {
+      return JSON.stringify(prompt, null, 2);
+    } catch {
+      return "User:\n[empty prompt: failed to serialize prompt]";
+    }
+  }
+  if (fallback === "error") return "";
+  if (fallback === "skip") return "";
+  return "User:\n[empty prompt]";
 }
 
 function extractText(content) {
   if (!content) return "";
   if (typeof content === "string") return content.trim();
-  if (!Array.isArray(content)) return "";
+  if (!Array.isArray(content)) {
+    if (typeof content === "object" && content.text) return String(content.text).trim();
+    return "";
+  }
 
   const parts = [];
   for (const part of content) {
@@ -52,6 +69,28 @@ function extractText(content) {
       } catch {
         parts.push(String(part.output));
       }
+      continue;
+    }
+    if (part.type === "tool-call") {
+      try {
+        parts.push(`[tool:${part.toolName}] ${JSON.stringify(part.input)}`);
+      } catch {
+        parts.push(`[tool:${part.toolName}]`);
+      }
+      continue;
+    }
+    if (part.type === "image") {
+      parts.push("[image]");
+      continue;
+    }
+    if (part.type === "file") {
+      const name = part.filename ? ` ${part.filename}` : "";
+      parts.push(`[file${name}]`);
+      continue;
+    }
+    if (typeof part.text === "string") {
+      parts.push(part.text);
+      continue;
     }
   }
 
@@ -174,10 +213,21 @@ function createLanguageModel({ provider, modelId, options }) {
     modelId,
     supportedUrls: {},
     async doGenerate(callOptions) {
-      const promptText = buildPrompt(callOptions.prompt);
+      const promptText = buildPrompt(callOptions.prompt, options);
       let text = "";
       let usage = DEFAULT_USAGE;
       let finishReason = { unified: "other", raw: undefined };
+      const warnings = [];
+
+      if (!promptText) {
+        warnings.push({ type: "other", message: "Empty prompt; skipping codex exec." });
+        return {
+          content: [{ type: "text", text: "" }],
+          finishReason: { unified: "other", raw: "empty-prompt" },
+          usage,
+          warnings,
+        };
+      }
 
       await runCodexExec({
         promptText,
@@ -214,12 +264,12 @@ function createLanguageModel({ provider, modelId, options }) {
         content: [{ type: "text", text }],
         finishReason,
         usage,
-        warnings: [],
+        warnings,
       };
     },
 
     async doStream(callOptions) {
-      const promptText = buildPrompt(callOptions.prompt);
+      const promptText = buildPrompt(callOptions.prompt, options);
 
       let usage = DEFAULT_USAGE;
       let finishReason = { unified: "other", raw: undefined };
@@ -230,7 +280,21 @@ function createLanguageModel({ provider, modelId, options }) {
 
       const stream = new ReadableStream({
         start(controller) {
-          controller.enqueue({ type: "stream-start", warnings: [] });
+          const warnings = [];
+          if (!promptText) {
+            warnings.push({ type: "other", message: "Empty prompt; skipping codex exec." });
+          }
+          controller.enqueue({ type: "stream-start", warnings });
+
+          if (!promptText) {
+            controller.enqueue({
+              type: "finish",
+              usage,
+              finishReason: { unified: "other", raw: "empty-prompt" },
+            });
+            controller.close();
+            return;
+          }
 
           runCodexExec({
             promptText,
