@@ -10,7 +10,7 @@ export function createCodexProvider(options: CodexProviderOptions = {}): any {
 
   return Object.assign(callable, {
     embeddingModel() {
-      throw new Error("codex-config does not support embeddings");
+      throw new Error("codex does not support embeddings");
     },
     imageModel(modelId?: string) {
       return createLanguageModel(modelId, options);
