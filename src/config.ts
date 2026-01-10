@@ -87,7 +87,7 @@ function resolveApiKey(
   if (requiresOpenaiAuth) {
     return process.env.OPENAI_API_KEY || auth.OPENAI_API_KEY || auth._OPENAI_API_KEY || null;
   }
-  return null;
+  return process.env.OPENAI_API_KEY || auth.OPENAI_API_KEY || auth._OPENAI_API_KEY || null;
 }
 
 function buildServersFromCodex(

@@ -42,11 +42,24 @@ test("loadCodexConfig resolves api key from auth.json", () => {
   const cfg = loadCodexConfig({ codexHome: dir });
   assert.equal(cfg.apiKey, "sk-test");
   assert.equal(cfg.baseUrl, "https://api.example.com/v1");
-  assert.equal(cfg.wireApi, "responses");
+});
+
+test("loadCodexConfig falls back to OPENAI_API_KEY without env_key", () => {
+  const dir = makeTempDir();
+  fs.writeFileSync(
+    path.join(dir, "config.toml"),
+    `model_provider = "tabcode"\nmodel = "gpt-5.2-codex"\n\n[model_providers.tabcode]\nname = "custom"\nbase_url = "https://api.example.com/v1"\nwire_api = "responses"\n`,
+  );
+  fs.writeFileSync(
+    path.join(dir, "auth.json"),
+    JSON.stringify({ OPENAI_API_KEY: "sk-fallback" }),
+  );
+
+  const cfg = loadCodexConfig({ codexHome: dir });
+  assert.equal(cfg.apiKey, "sk-fallback");
 });
 
 test("resolveModel prefers codex config unless disabled", () => {
-  assert.equal(resolveModel("gpt-5.2", "foo", true), "gpt-5.2");
-  assert.equal(resolveModel("gpt-5.2", "foo", false), "foo");
-  assert.equal(resolveModel("gpt-5.2", "default", false), "gpt-5.2");
+  assert.equal(resolveModel("gpt-5.2", "foo"), "foo");
+  assert.equal(resolveModel("gpt-5.2", "default"), "gpt-5.2");
 });
