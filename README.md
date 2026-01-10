@@ -28,7 +28,12 @@ pnpm run build
 ```
 
 5) Configure OpenCode to use the provider.
-Edit `~/.config/opencode/opencode.json`:
+Edit `~/.config/opencode/opencode.json`.
+
+Notes:
+- `name`, `servers`, and `server` are optional and only used for display and override behavior.
+- A fresh install can omit `servers` and `server` and rely on defaults from `~/.codex/config.toml`.
+- If you omit `name`, the provider display name falls back to `Codex`.
 
 ```json
 {
