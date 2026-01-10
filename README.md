@@ -281,6 +281,31 @@ Edit `~/.config/opencode/opencode.json`:
 
 7) In the TUI, run `/models` and select `codex/default`.
 
+## Upgrade
+
+### LLM-assisted upgrade (OpenCode)
+
+Open OpenCode and send this instruction so the model uses git to update the provider repo:
+
+```
+Follow README.md to update opencode-codex-provider. Use git tool. Repo: https://github.com/JakkuSakura/opencode-codex-provider
+```
+
+### Manual upgrade
+
+```bash
+cd ~/.config/opencode/providers/opencode-codex-provider
+
+git fetch origin
+# Prefer fast-forward updates only
+git pull --ff-only
+
+pnpm install
+pnpm run build
+```
+
+Restart OpenCode after upgrading.
+
 ## Oh-My-OpenCode (default model override)
 
 Oh-My-OpenCode can override agent model choices. To make all agents use Codex, update `~/.config/opencode/oh-my-opencode.json`:
